@@ -2,6 +2,7 @@ import copy
 import json
 import tempfile
 import os
+import platform
 import sympy as sp
 from ..tensor import Tensor
 from ..ops import PlaceHolder
@@ -9,7 +10,11 @@ from ..chakra.node import Node
 import tqdm
 
 
-TMP_DIR_ROOT = "/dev/shm"
+# Use /dev/shm on Linux for better performance, fallback to system temp dir on other platforms
+if platform.system() == "Linux" and os.path.exists("/dev/shm"):
+    TMP_DIR_ROOT = "/dev/shm"
+else:
+    TMP_DIR_ROOT = None  # Use system default temp directory
 
 
 OPTIMIZED = os.environ.get("STAGE_OPTIMIZED", "1") == "1"
