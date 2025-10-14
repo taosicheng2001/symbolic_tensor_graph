@@ -3,6 +3,8 @@ import json
 import tempfile
 import os
 import platform
+
+from numpy import number
 import sympy as sp
 from ..tensor import Tensor
 from ..ops import PlaceHolder
@@ -492,7 +494,7 @@ class BundledHybridGraph(BundledTensorGraph):
             return self.readout_no_optimize(filename, backend)
         comm_groups = self.comm_groups
         comm_groups, group_name_template = self._standarize_comm_group_key_names(comm_groups)
-        
+
         for readable_rank in tqdm.tqdm(self.graphs.keys(), desc="reading out"):
             number_rank = self.readable_rank_map_number_rank[readable_rank]
             if "%d" in filename:
@@ -502,6 +504,17 @@ class BundledHybridGraph(BundledTensorGraph):
             graph = self.graphs[readable_rank]
             nodes = self.update_comm_group(graph.get_nodes(), comm_groups, group_name_template, readable_rank)
             graph.readout(filename_this_node, nodes=nodes, backend=backend)
+
+        import os
+        output_dir = os.path.dirname(filename) if os.path.dirname(filename) else "."
+        strategy_file = os.path.join(output_dir, "ParallelStrategy.txt")
+        
+        with open(strategy_file, 'w') as f:
+            for readable_rank in self.graphs.keys():
+                number_rank = self.readable_rank_map_number_rank[readable_rank]
+                f.write(f"{number_rank} {readable_rank}\n")
+        
+        print(f"Parallel strategy saved to: {strategy_file}")
             
     def readout_no_optimize(self, filename, backend=None):
         for readable_rank in self.graphs.keys():
